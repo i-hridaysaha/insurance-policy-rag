@@ -13,6 +13,16 @@ Retrieval was built and verified first, on purpose. It is the gate: if the right
 come back, no prompt downstream can rescue the answer, and measuring answer quality on top of
 broken retrieval only measures noise.
 
+## Architecture
+
+<p align="center">
+  <img src="docs/architecture.svg" alt="Insurance Policy RAG architecture: a policy PDF is chunked by clause and indexed offline; per question, hybrid retrieval (Sentence-BERT + FAISS and BM25, fused by RRF) returns the top-five clauses; a local LLM answers only from those clauses; every cited clause is verified against the retrieved context; the result is an answer or a refusal." width="560">
+</p>
+
+The two boxes in accent are what make this more than a demo: refusal is the model's judgment
+rather than a retrieval-score threshold (the scores do not separate answerable from unanswerable
+questions), and every citation is checked against the retrieved clauses instead of trusted.
+
 ---
 
 ## The document
