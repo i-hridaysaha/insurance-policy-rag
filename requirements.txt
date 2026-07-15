@@ -1,0 +1,27 @@
+# --- ingestion ---
+pypdf==6.1.1
+PyYAML==6.0.2
+
+# --- retrieval ---
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0.post1
+rank-bm25==0.2.2
+snowballstemmer==2.2.0
+numpy==2.1.3
+
+# --- generation (local, default) ---
+# The generator talks to a local Ollama server over HTTP. Install Ollama separately
+# (https://ollama.com), then `ollama pull qwen2.5:14b-instruct`. No API key needed.
+httpx==0.28.1
+
+# --- api ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# --- optional: frontier baseline for the eval (needs an Anthropic API key) ---
+# Only for `evaluate.py --backend anthropic`. Everything else runs without it.
+anthropic==0.116.0
+
+# --- dev ---
+pytest==8.3.4

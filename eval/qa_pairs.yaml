@@ -1,0 +1,547 @@
+# Ground-truth Q&A set for my:Optima Secure prospectus (UIN HDFHLIP26058V082526)
+#
+# Hand-built by reading the source document. Every `answer` traces to the exact
+# clause named in `citation` — nothing here is inferred or generated.
+#
+# FIELD NOTES
+#   gold_sections : the clause(s) a correct retrieval MUST surface. This is the
+#                   relevance judgement used for recall@k and MRR.
+#   plan_scope    : `all` if the answer holds for every plan; otherwise the plans
+#                   it holds for. The document defines EIGHT plans and many answers
+#                   differ per plan — questions tagged `plan_specific` are the ones
+#                   a naive RAG gets confidently wrong.
+#   difficulty    : easy   = single clause, question uses the document's own wording
+#                   medium = single clause, but question uses a layperson's wording
+#                   hard   = multi-clause, plan-conditional, or requires a negation
+#   answer_type   : covered | not_covered | conditional | value | procedure | refusal
+#
+# `refusal` items are deliberate negatives. The system MUST say it cannot answer
+# from the document rather than guess. Two are genuinely absent from the document;
+# one (premium lookup) is present in the source PDF but deliberately excluded from
+# the retrieval corpus, and that boundary is documented in the README.
+
+meta:
+  document: my:Optima Secure Prospectus
+  uin: HDFHLIP26058V082526
+  source_pdf: data/raw/optima_secure_prospectus.pdf
+  total_pairs: 34          # 31 answerable + 3 deliberate refusals
+  answerable_pairs: 31     # the denominator for every recall@k and MRR figure quoted
+  refusal_pairs: 3
+  difficulty: {easy: 9, medium: 12, hard: 13}
+  plans:
+    - Optima Suraksha
+    - Optima Secure
+    - Optima Super Secure
+    - Optima Secure Global
+    - Optima Secure Global Plus
+    - Optima Select
+    - Optima Lite
+    - Optima Secure +
+
+pairs:
+
+  # ---------- waiting periods: the single most-asked category ----------
+
+  - id: wp-001
+    question: How long do I have to wait before my pre-existing conditions are covered?
+    answer: >-
+      36 months of continuous coverage from the inception of your first policy with the
+      insurer, unless your Policy Schedule specifies otherwise. If you had prior continuous
+      coverage elsewhere, the waiting period is reduced by the extent of that prior coverage.
+    citation: "Section 10.1.a - Pre-Existing Diseases (Code Excl01), p.31-32"
+    gold_sections: ["10.1.a"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: value
+
+  - id: wp-002
+    question: I was diagnosed with a hernia. When can I claim for the surgery?
+    answer: >-
+      Hernia surgery is in the specified disease/procedure list, so it is excluded until
+      24 months of continuous coverage have elapsed from the inception of your first policy.
+      This waiting period does not apply if the hernia results from an Accident. If the same
+      condition also falls under the pre-existing disease waiting period, the longer of the
+      two applies.
+    citation: "Section 10.1.b - Specified Disease/Procedure waiting period (Code Excl02), p.32-33"
+    gold_sections: ["10.1.b"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: conditional
+    note: >-
+      Tests whether retrieval can connect a specific named condition to the list it appears
+      in. "Hernia" appears only inside the Surgical Procedures table, not in prose.
+
+  - id: wp-003
+    question: My mother needs cataract surgery. Is it covered right away?
+    answer: >-
+      No. Cataract falls under "Cataract and other disorders of lens and Retina" in the
+      specified disease list, so it carries a 24-month waiting period from the inception of
+      the first policy. The exclusion does not apply if the cataract arises from an Accident.
+    citation: "Section 10.1.b - Specified Disease/Procedure waiting period (Code Excl02), p.32"
+    gold_sections: ["10.1.b"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: not_covered
+
+  - id: wp-004
+    question: I bought the policy last week and now I'm sick. Can I claim?
+    answer: >-
+      Generally no. Treatment for any illness within 30 days of the first policy commencement
+      date is excluded. The two exceptions are claims arising from an accident, and cases where
+      you have had continuous coverage for more than twelve months.
+    citation: "Section 10.1.c - 30-day waiting period (Code Excl03), p.33"
+    gold_sections: ["10.1.c"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: not_covered
+
+  - id: wp-005
+    question: Can the pre-existing disease waiting period be shortened?
+    answer: >-
+      Yes, but not by you directly. The PED wait period modification option can reduce the
+      36-month waiting period to 24 months or 12 months. It can only be opted at channel level
+      and only at policy inception, so individual policyholders cannot select it themselves.
+      Once selected it cannot be opted out of for the lifetime of the policy.
+    citation: "Section 4.12 - PED wait period modification, p.22"
+    gold_sections: ["4.12"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: conditional
+    note: >-
+      Adversarial. The obvious retrieval target is 10.1.a, but the correct answer lives in
+      4.12. Tests whether the system finds the modifying clause, not just the base rule.
+
+  # ---------- exclusions: where a wrong "yes" is most damaging ----------
+
+  - id: ex-001
+    question: Is maternity covered in the first year?
+    answer: >-
+      Maternity is not covered at all under this policy, in the first year or any year.
+      Medical expenses traceable to childbirth, including complicated deliveries and caesarean
+      sections, are permanently excluded, with the single exception of ectopic pregnancy.
+      Miscarriage (unless due to an accident) and lawful medical termination of pregnancy are
+      also excluded. Maternity is available only by buying the separate "Parenthood" add-on,
+      which carries its own 2-year waiting period and is governed by its own policy document.
+    citation: "Section 10.1.r - Maternity (Code Excl18), p.35; add-on referenced in Section 6, p.28"
+    gold_sections: ["10.1.r", "6"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: not_covered
+    note: >-
+      The highest-value question in the set. The framing presupposes maternity IS covered and
+      only asks about timing. A system that pattern-matches "first year" to a waiting period
+      clause will invent a waiting period. Correct behaviour is to reject the premise.
+
+  - id: ex-002
+    question: Does the policy pay for IVF?
+    answer: >-
+      No. Expenses related to sterility and infertility are excluded, and this explicitly
+      includes assisted reproduction services such as IVF, ZIFT, GIFT and ICSI, as well as
+      contraception, sterilization, gestational surrogacy and reversal of sterilization.
+    citation: "Section 10.1.q - Sterility and Infertility (Code Excl17), p.35"
+    gold_sections: ["10.1.q"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: not_covered
+
+  - id: ex-003
+    question: Are my regular doctor visits and medicines covered?
+    answer: >-
+      No. Treatment taken on an outpatient basis is specifically excluded. The policy indemnifies
+      hospitalization; pre-hospitalization (60 days) and post-hospitalization (180 days) expenses
+      are payable only when linked to an admissible hospitalization claim.
+    citation: "Section 10.2.l - Specific Exclusions, p.36; Sections 3.5 and 3.6, p.7-8"
+    gold_sections: ["10.2.l"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: not_covered
+
+  - id: ex-004
+    question: Will you pay for my spectacles or a hearing aid?
+    answer: >-
+      No. The provision or fitting of hearing aids, spectacles and contact lenses is excluded.
+      Separately, treatment for correction of eyesight due to refractive error below 7.5 dioptres
+      is also excluded.
+    citation: "Section 10.2.m, p.36; Section 10.1.o - Refractive Error (Code Excl15), p.35"
+    gold_sections: ["10.2.m", "10.1.o"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: not_covered
+
+  - id: ex-005
+    question: I want weight loss surgery. Is bariatric surgery covered?
+    answer: >-
+      Only conditionally. Surgical treatment of obesity is excluded unless it meets all of four
+      conditions: the surgery is advised by a doctor, it is supported by clinical protocols, the
+      member is 18 or older, and BMI is either 40 or above, or 35 or above together with a severe
+      co-morbidity (obesity-related cardiomyopathy, coronary heart disease, severe sleep apnoea,
+      or uncontrolled type-2 diabetes) after less invasive weight loss methods have failed.
+    citation: "Section 10.1.f - Obesity/Weight control (Code Excl06), p.33-34"
+    gold_sections: ["10.1.f"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: conditional
+    note: Multi-condition answer. Retrieving the clause is easy; not over-simplifying it is not.
+
+  - id: ex-006
+    question: I got injured rock climbing on holiday. Am I covered?
+    answer: >-
+      Probably yes, though the clause is narrower than it first appears. The exclusion applies to
+      treatment necessitated by participation AS A PROFESSIONAL in hazardous or adventure sports,
+      with rock climbing named explicitly. Recreational participation is not excluded by the
+      wording of this clause.
+    citation: "Section 10.1.i - Hazardous or Adventure Sports (Code Excl09), p.34"
+    gold_sections: ["10.1.i"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: conditional
+    note: >-
+      Tests precision on the qualifier "as a professional". A careless answer says "rock climbing
+      is excluded" and is wrong for the overwhelming majority of claimants.
+
+  # ---------- plan-specific: the eight-variant trap ----------
+
+  - id: pl-001
+    question: What is my room rent limit?
+    answer: >-
+      It depends on your plan. Room rent is payable At Actuals in Optima Suraksha, Optima Secure,
+      Optima Super Secure, Optima Secure Global, Optima Secure Global Plus and Optima Secure +.
+      In Optima Lite it is capped at 1% of base sum insured per day (ICU at 2% per day). In
+      Optima Select it is capped at a Single Private room (ICU at Actuals). If you are admitted
+      to a room above your eligible category, a proportionate deduction is applied to the room
+      rent AND to all associated medical expenses.
+    citation: "Section 3.1.a, p.6; Annexure A - Schedule of Benefits, p.60; proportionate deduction at Section 3.1.1 Note iii, p.6-7"
+    gold_sections: ["3.1.a", "annexure_a", "3.1.1"]
+    plan_scope: plan_specific
+    difficulty: hard
+    answer_type: value
+    note: >-
+      The canonical plan-dependent question. Any single-answer response is wrong for at least
+      two of the eight plans. Correct behaviour is to condition on the plan or ask which one.
+
+  - id: pl-002
+    question: How much extra cover does the Secure Benefit give me?
+    answer: >-
+      It depends on the plan. Secure Benefit adds an amount equal to 100% of Base Sum Insured in
+      Optima Secure, Optima Secure Global, Optima Secure Global Plus and Optima Secure +, and
+      200% of Base Sum Insured in Optima Super Secure. It is not available at all in Optima
+      Suraksha, Optima Select or Optima Lite. It applies only once per policy year, only after
+      the Base Sum Insured is exhausted, and any unused amount does not carry forward. In the
+      two Global plans it applies to India claims only.
+    citation: "Section 4.5 - Secure Benefit, p.12; Annexure A, p.63"
+    gold_sections: ["4.5", "annexure_a"]
+    plan_scope: plan_specific
+    difficulty: hard
+    answer_type: value
+
+  - id: pl-003
+    question: Do I get a bonus every year even if I make a claim?
+    answer: >-
+      Yes, but the mechanism and the amount both depend on the plan, and three different benefits
+      do this job. Optima Suraksha and Optima Lite accrue a Cumulative Bonus of 10% of Base Sum
+      Insured per year, capped at 100%. Optima Select accrues Cumulative Bonus at 25% per year,
+      capped at 100%. Optima Secure, Optima Super Secure, Optima Secure Global and Optima Secure
+      Global Plus instead accrue Plus Benefit at 50% of Base Sum Insured per year, capped at 100%.
+      Optima Secure + accrues Infinite Benefit at 100% of Base Sum Insured per year with no cap on
+      accumulation; Optima Super Secure can opt into Infinite Benefit instead of Plus Benefit.
+      Optima Select and Optima Lite can optionally take Plus Benefit in place of their Cumulative
+      Bonus. All of them accrue irrespective of claims, and all require renewal without a break
+      with premium paid inside the Grace Period. Only one of Cumulative Bonus, Plus Benefit or
+      Infinite Benefit can apply in any given policy year.
+    citation: "Section 3.8 - Cumulative Bonus, p.8-9; Section 4.4 - Plus Benefit, p.11-12; Section 4.17 - Infinite Benefit, p.25-27; Section 4.16, p.25; Annexure A, p.62-64"
+    gold_sections: ["3.8", "4.4", "4.17", "annexure_a"]
+    plan_scope: plan_specific
+    difficulty: hard
+    answer_type: conditional
+    note: >-
+      Four different clauses answer one plain question, and which one applies is determined by a
+      table, not by prose. The hardest question in the set.
+
+  - id: pl-004
+    question: Is the air ambulance covered, and for how much?
+    answer: >-
+      Yes in seven of the eight plans, up to Rs 5,00,000. It is NOT covered at all in Optima Select.
+      The cover requires that a doctor advised air transport in writing, that treatment was not
+      available locally, and that transport was to the nearest hospital. Return transport home is
+      not covered, and the benefit does not reduce your Sum Insured.
+    citation: "Section 4.1 - Emergency Air Ambulance, p.10; Annexure A, p.62"
+    gold_sections: ["4.1", "annexure_a"]
+    plan_scope: plan_specific
+    difficulty: hard
+    answer_type: value
+
+  - id: pl-005
+    question: How many days of pre-hospitalization expenses do I get?
+    answer: >-
+      60 days immediately prior to the date of admission in every plan except Optima Lite, where
+      it is 30 days. Post-hospitalization is 180 days after discharge in every plan except Optima
+      Lite, where it is 60 days. In both cases the expenses are payable only if they relate to an
+      admissible hospitalization claim.
+    citation: "Section 3.5, p.7 and Section 3.6, p.8; modifications at Sections 4.14 and 4.15, p.24-25; Annexure A, p.61"
+    gold_sections: ["3.5", "3.6", "4.14", "4.15"]
+    plan_scope: plan_specific
+    difficulty: medium
+    answer_type: value
+
+  # ---------- benefit mechanics ----------
+
+  - id: bn-001
+    question: If I use up my whole cover, do I get more?
+    answer: >-
+      Yes. The Automatic Restore Benefit instantly adds 100% of the Base Sum Insured when an
+      admissible claim partially or completely exhausts your Sum Insured. The restored amount can
+      be used for the remainder of the policy year, including for the SAME illness you already
+      claimed for, and by any insured person on the policy, not just the one who claimed. It
+      triggers once per policy year, unless your schedule says "Unlimited Times", in which case it
+      triggers on every admissible claim. Unused restored amount does not carry forward.
+    citation: "Section 4.6 - Automatic Restore Benefit, p.12-13"
+    gold_sections: ["4.6"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: covered
+    note: >-
+      The "same illness" clause (4.6.vi) is the differentiator versus most competitor products and
+      is what people actually want to know. It sits six sub-clauses deep.
+
+  - id: bn-002
+    question: In what order does the policy use up my different benefit buckets?
+    answer: >-
+      In this sequence: first the Aggregate Deductible (if opted), then the Base Sum Insured, then
+      the Secure Benefit, then whichever of Cumulative Bonus / Plus Benefit / Infinite Benefit
+      applies to your plan, and finally the Automatic Restore Benefit. A single claim can never
+      exceed the sum of Base Sum Insured, Secure Benefit, Cumulative Bonus, Plus Benefit and
+      Infinite Benefit remaining in that policy year.
+    citation: "Section 13.2 - Utilization of Sum Insured, p.47"
+    gold_sections: ["13.2"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: procedure
+
+  - id: bn-003
+    question: What is the Protect Benefit actually for?
+    answer: >-
+      It pays for the non-medical consumables that policies normally reject: gloves, food charges,
+      and the rest of the items listed in Annexure B. Those items are otherwise excluded by Section
+      10.2.k; Protect Benefit disapplies that exclusion. It only pays where the underlying claim is
+      admissible under Section 3 Base Coverage.
+    citation: "Section 4.3 - Protect Benefit, p.11; exclusion disapplied is Section 10.2.k, p.36; item list at Annexure B, p.67-68"
+    gold_sections: ["4.3", "10.2.k"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: covered
+    note: >-
+      Requires linking a benefit to the exclusion it cancels. The two clauses are 25 pages apart
+      and neither is fully meaningful alone.
+
+  - id: bn-004
+    question: What is the minimum hospital stay for a claim to be valid?
+    answer: >-
+      24 consecutive hours. This minimum does not apply to Day Care Treatment, which is covered
+      regardless of duration.
+    citation: "Section 3.1.1 Note i, p.6"
+    gold_sections: ["3.1.1"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: value
+
+  - id: bn-005
+    question: My brother is donating me a kidney. Are his costs covered?
+    answer: >-
+      His hospitalization for harvesting the organ is covered, provided your own hospitalization
+      claim is admissible and the donation complies with the Transplantation of Human Organs Act.
+      But three things are specifically NOT covered: the donor's pre-hospitalization and
+      post-hospitalization expenses, the cost of transporting or preserving the organ, and any
+      other medical expense consequent to the harvesting.
+    citation: "Section 3.7 - Organ Donor Expenses, p.8"
+    gold_sections: ["3.7"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: conditional
+
+  - id: bn-006
+    question: Can I get treatment at home instead of being admitted?
+    answer: >-
+      Yes, under Home Health Care, but only if the treatment would normally have required inpatient
+      care, it is prescribed in writing, and it is pre-authorized by the company. Critically, this
+      cover is NOT available on a reimbursement basis, so you must obtain pre-authorization before
+      treatment begins or you cannot claim at all.
+    citation: "Section 3.2 - Home Health Care, p.7; notification timing at Section 11.1.b, p.36"
+    gold_sections: ["3.2"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: conditional
+    note: >-
+      The "not available on reimbursement basis" sentence is the operative one and is easy to miss.
+      Getting this wrong costs a policyholder the entire claim.
+
+  # ---------- global cover ----------
+
+  - id: gl-001
+    question: I fell ill while travelling abroad. Is there a deductible?
+    answer: >-
+      Yes. Under Global Health Cover, a per-claim deductible of Rs 10,000 applies separately to
+      each and every claim, with the sole exception of E-Opinion for Critical Illness. Note that
+      the Aggregate Deductible (Section 4.7) does NOT apply to claims under this cover.
+    citation: "Section 4.9.A.ii, p.17 and Section 4.10.ii, p.18"
+    gold_sections: ["4.9", "4.10"]
+    plan_scope: ["Optima Secure Global", "Optima Secure Global Plus"]
+    difficulty: medium
+    answer_type: value
+
+  - id: gl-002
+    question: I'm on a long trip abroad. Is there a time limit on overseas treatment?
+    answer: >-
+      Yes. No claim is payable where medical treatment taken outside India has not commenced within
+      the first 45 days of a trip. A trip is deemed to start on the date you board the flight
+      leaving India.
+    citation: "Section 4.9.A.vi, p.17"
+    gold_sections: ["4.9"]
+    plan_scope: ["Optima Secure Global", "Optima Secure Global Plus"]
+    difficulty: hard
+    answer_type: value
+    note: >-
+      An obscure, high-consequence rule that a policyholder would almost never find by reading.
+      Exactly the kind of clause the system exists to surface.
+
+  - id: gl-003
+    question: If I'm hospitalized overseas, will you fly my wife out and pay for her hotel?
+    answer: >-
+      Under Overseas Travel Secure, yes, but only if the overseas doctor advised a minimum
+      hospitalization of 5 consecutive days AND advised that an accompanying person is required,
+      and only if a claim under Global Health Cover has been accepted. Accommodation is indemnified
+      up to Rs 15,000 per day, only for days you were actually hospitalized, capped at 30 days per
+      policy year. Only airfare is covered for travel; other transport is not. Meals, laundry and
+      transport are not covered. This cover can only be bought with Optima Secure Global or Optima
+      Secure Global Plus.
+    citation: "Section 4.11 - Overseas Travel Secure, p.19-21"
+    gold_sections: ["4.11"]
+    plan_scope: ["Optima Secure Global", "Optima Secure Global Plus"]
+    difficulty: hard
+    answer_type: conditional
+
+  # ---------- claims and policy administration ----------
+
+  - id: cl-001
+    question: How quickly do I have to tell you about a claim?
+    answer: >-
+      For emergency hospitalization, within 24 hours of the hospitalization, or before discharge,
+      whichever is earlier. For planned hospitalization, at least 48 hours before admission. The
+      same 48-hour rule applies if you intend to use Home Health Care.
+    citation: "Section 11.1 - Notification of a Claim, p.36"
+    gold_sections: ["11.1"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: procedure
+
+  - id: cl-002
+    question: I paid the hospital myself. How long do I have to submit the bills?
+    answer: >-
+      Within 30 days of the date of discharge for hospitalization, day care treatment or
+      pre-hospitalization expenses. Post-hospitalization expenses must be submitted within 15 days
+      of completing the post-hospitalization treatment. Delay may be condoned on merit if it was
+      for reasons beyond your control.
+    citation: "Section 11.6 - Procedure for Reimbursement Claims, p.38; condonation at Section 11.7 Note iv, p.39"
+    gold_sections: ["11.6"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: value
+
+  - id: cl-003
+    question: You're taking forever to settle my claim. Do I get anything for the delay?
+    answer: >-
+      Yes. If payment of a claim is delayed, the company is liable to pay interest from the date it
+      received intimation of the claim to the date of payment, at 2% above the bank rate (the rate
+      fixed by the RBI prevailing on the 1st day of the financial year in which the claim fell due).
+    citation: "Section 12.3 - Claim Settlement, provision for Penal Interest, p.40"
+    gold_sections: ["12.3"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: value
+
+  - id: cl-004
+    question: I changed my mind about the policy. Can I get my money back?
+    answer: >-
+      Yes, within the Free Look Period of 30 days from receipt of the policy document, provided you
+      have made no claim. You get a refund of premium less any medical examination expenses and
+      stamp duty, or less a proportionate risk premium if cover had already commenced. The Free Look
+      Period applies only to new individual policies, not to renewals, portability or migration.
+    citation: "Section 12.8 - Free look Period, p.42"
+    gold_sections: ["12.8"]
+    plan_scope: all
+    difficulty: easy
+    answer_type: procedure
+
+  - id: cl-005
+    question: I've had the policy for six years. Can you still reject a claim saying I hid something?
+    answer: >-
+      No, other than for established fraud. After 60 continuous months of coverage (the Moratorium
+      Period, which includes time carried over through portability and migration), no policy or
+      claim can be contested on the grounds of non-disclosure or misrepresentation. The moratorium
+      applies to the sum insured of the first policy; if you increased your sum insured, a fresh
+      60 months runs on the enhanced portion only.
+    citation: "Section 12.6 - Moratorium Period, p.41"
+    gold_sections: ["12.6"]
+    plan_scope: all
+    difficulty: medium
+    answer_type: conditional
+
+  - id: cl-006
+    question: I missed my renewal date. Have I lost my waiting period credit?
+    answer: >-
+      Not if you pay within the Grace Period. The Grace Period is 30 days for multi-year, yearly,
+      half-yearly and quarterly premium payment, and 15 days for monthly. Paying within it preserves
+      accrued continuity benefits for waiting periods and specific waiting periods, and is not
+      treated as a break in policy. If you pay premium in instalments, coverage continues during the
+      grace period; if you do not, coverage is not available for the unpaid period. If the instalment
+      is not received within the Grace Period, the policy is cancelled.
+    citation: "Section 12.13 - Premium Payment in Instalments, p.44; Section 12.9.b - Renewal, p.42"
+    gold_sections: ["12.13", "12.9"]
+    plan_scope: all
+    difficulty: hard
+    answer_type: conditional
+
+  # ---------- deliberate negatives: the system must refuse ----------
+
+  - id: neg-001
+    question: What is this insurer's claim settlement ratio?
+    answer: >-
+      NOT FOUND IN THIS DOCUMENT. The prospectus does not state a claim settlement ratio. The system
+      must say so rather than produce a figure.
+    citation: null
+    gold_sections: []
+    plan_scope: all
+    difficulty: easy
+    answer_type: refusal
+    note: >-
+      A plausible-sounding insurance question with no answer in the corpus. Tests hallucination
+      resistance against the strongest temptation: a question the LLM's parametric memory may
+      "know" an answer to from pretraining.
+
+  - id: neg-002
+    question: How does this compare to Star Health's family floater plan?
+    answer: >-
+      NOT FOUND IN THIS DOCUMENT. The prospectus covers only my:Optima Secure and makes no reference
+      to other insurers' products. The system must decline rather than compare from memory.
+    citation: null
+    gold_sections: []
+    plan_scope: all
+    difficulty: easy
+    answer_type: refusal
+
+  - id: neg-003
+    question: What premium would a 40-year-old in Bengaluru pay for 10 lakh cover?
+    answer: >-
+      OUT OF RETRIEVAL SCOPE. Premium rate charts exist in the source PDF (pages 69-288) but are
+      deliberately excluded from the retrieval corpus: they are numeric lookup tables indexed by
+      age x sum insured x plan x city tier, and semantic retrieval over them is both unreliable and
+      the wrong tool. The correct behaviour is to say the premium tables are not part of the
+      answerable corpus and point the user to the rate chart, not to guess a number.
+    citation: "Rate Charts, p.69-288 (excluded from index by design)"
+    gold_sections: []
+    plan_scope: all
+    difficulty: medium
+    answer_type: refusal
+    note: >-
+      A known, documented boundary rather than a gap. Distinguishes "the document doesn't say" from
+      "this system doesn't answer that", which are different failures and should read differently
+      to a user.
