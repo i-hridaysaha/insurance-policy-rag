@@ -1,3 +1,6 @@
+# --- local secrets (Groq / hosted-backend key for running the demo locally) ---
+.env.local
+
 # --- python ---
 .venv/
 __pycache__/
@@ -21,3 +24,6 @@ eval/results.json
 
 # --- local editor / tooling config ---
 .claude/
+
+# --- personal Wix / blog drafts, not repo documentation ---
+writing/

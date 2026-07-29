@@ -18,25 +18,49 @@ Run:  uvicorn src.api.app:app --reload
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from src.config import DEFAULT_TOP_K, OLLAMA_MODELS
+from src.config import (
+    DEFAULT_TOP_K,
+    GEN_API_KEY,
+    GEN_BASE_URL,
+    GEN_MODEL,
+    OLLAMA_MODELS,
+)
 from src.generation.answer import Answerer
-from src.generation.backends import OllamaBackend
+from src.generation.backends import OllamaBackend, OpenAICompatBackend
 from scripts.query import load
+
+# The single-page frontend lives beside this module's package root.
+_WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
 
 # Populated at startup. The FAISS index and the Sentence-BERT model take a few seconds to load, so
 # they are loaded once here, not per request.
 _state: dict = {}
 
 
+def _make_backend():
+    """Hosted demo talks to a free OpenAI-compatible API; local runs Ollama.
+
+    The switch is the presence of GEN_API_KEY. With it set (the deployed Space), generation goes
+    to the free API. Without it (a clone on someone's machine), the app behaves exactly as before
+    and runs the local model. Same prompt, same schema, same guards either way.
+    """
+    if GEN_API_KEY:
+        return OpenAICompatBackend(model=GEN_MODEL, base_url=GEN_BASE_URL, api_key=GEN_API_KEY), GEN_MODEL
+    return OllamaBackend(OLLAMA_MODELS[0]), OLLAMA_MODELS[0]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     retriever, _ = load()
-    _state["answerer"] = Answerer(retriever, OllamaBackend(OLLAMA_MODELS[0]))
-    _state["model"] = OLLAMA_MODELS[0]
+    backend, model = _make_backend()
+    _state["answerer"] = Answerer(retriever, backend)
+    _state["model"] = model
     yield
     _state.clear()
 
@@ -76,6 +100,12 @@ class AskResponse(BaseModel):
 
     retrieved: list[Citation] = Field(description="the clauses passed to the model, for auditing")
     model: str
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Serve the single-page demo frontend."""
+    return FileResponse(_WEB_DIR / "index.html")
 
 
 @app.get("/health")

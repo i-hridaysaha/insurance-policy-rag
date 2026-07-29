@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Insurance Policy Q&A (RAG)</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1e222b;
+      --border: #2a2f3a;
+      --text: #e7e9ee;
+      --muted: #9aa3b2;
+      --accent: #6ea8fe;
+      --accent-dim: #2b3a57;
+      --good: #4ade80;
+      --warn: #fbbf24;
+      --bad: #f87171;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --border: #d9dee6;
+        --text: #1b1f27; --muted: #5b6472; --accent: #2563eb; --accent-dim: #dbe6ff;
+        --good: #15803d; --warn: #b45309; --bad: #b91c1c;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+    header h1 { font-size: 1.5rem; margin: 0 0 6px; }
+    header p { color: var(--muted); margin: 0 0 4px; }
+    .note {
+      font-size: 0.85rem; color: var(--muted); background: var(--panel-2);
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 16px 0 24px;
+    }
+    form { display: flex; gap: 8px; margin-bottom: 10px; }
+    input[type=text] {
+      flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--panel); color: var(--text); font-size: 1rem;
+    }
+    input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    button {
+      padding: 12px 18px; border-radius: 10px; border: 1px solid var(--accent);
+      background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .examples button {
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+      font-weight: 400; font-size: 0.85rem; padding: 6px 12px; border-radius: 999px;
+    }
+    #out { display: none; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+    .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .pill { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
+    .pill.answered { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
+    .pill.refused  { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+    .answer { font-size: 1.05rem; white-space: pre-wrap; }
+    /* The two trust boxes, in accent -- the point of the system, surfaced not buried. */
+    .trust { border-left: 3px solid var(--accent); background: var(--panel-2); padding: 12px 14px; border-radius: 6px; margin-top: 14px; font-size: 0.9rem; }
+    .trust.bad { border-left-color: var(--bad); }
+    .trust b { color: var(--text); }
+    .trust.ok b { color: var(--good); }
+    .trust.bad b { color: var(--bad); }
+    .cites { margin-top: 6px; }
+    .cite { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; background: var(--accent-dim); color: var(--text); padding: 2px 8px; border-radius: 6px; margin: 2px 4px 2px 0; }
+    .plan-flag { color: var(--warn); font-size: 0.85rem; margin-top: 10px; }
+    details { margin-top: 14px; }
+    details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+    .retr { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+    .retr div { padding: 3px 0; }
+    .err { color: var(--bad); }
+    .spin { color: var(--muted); }
+    footer { color: var(--muted); font-size: 0.8rem; margin-top: 40px; text-align: center; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Insurance Policy Q&amp;A</h1>
+      <p>Ask a health-insurance policy a plain-English question. Answers are grounded in the policy's own clauses, with the exact clause cited &mdash; or an honest refusal when the policy does not say.</p>
+    </header>
+
+    <div class="note" id="model-note">Loading model&hellip;</div>
+
+    <form id="ask-form">
+      <input type="text" id="q" placeholder="e.g. Is maternity covered in the first year?" autocomplete="off" />
+      <button type="submit" id="submit">Ask</button>
+    </form>
+
+    <div class="examples" id="examples">
+      <button data-q="Is maternity covered in the first year?">Maternity in year one?</button>
+      <button data-q="What is the room rent limit?">Room rent limit?</button>
+      <button data-q="Is cosmetic surgery covered?">Cosmetic surgery?</button>
+      <button data-q="What is the premium for a 35-year-old?">Premium for a 35-year-old?</button>
+    </div>
+
+    <div id="out"></div>
+
+    <footer>
+      Retrieval + grounded generation, verified citations.
+      <a href="https://github.com/i-hridaysaha/insurance-policy-rag" target="_blank" rel="noopener">Source &amp; method on GitHub</a>.
+    </footer>
+  </div>
+
+  <script>
+    const form = document.getElementById("ask-form");
+    const q = document.getElementById("q");
+    const out = document.getElementById("out");
+    const submit = document.getElementById("submit");
+    const modelNote = document.getElementById("model-note");
+
+    fetch("health").then(r => r.json()).then(h => {
+      modelNote.textContent = "Generation model: " + (h.model || "unknown") +
+        ". Retrieval quality numbers in the README are measured on the local models (qwen2.5:14b, llama3.1:8b). Whatever model is serving this instance, treat its answer fluency as illustrative, not as the eval result.";
+    }).catch(() => { modelNote.textContent = "Backend unreachable."; });
+
+    document.getElementById("examples").addEventListener("click", e => {
+      if (e.target.dataset.q) { q.value = e.target.dataset.q; form.requestSubmit(); }
+    });
+
+    const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const question = q.value.trim();
+      if (!question) return;
+      submit.disabled = true;
+      out.style.display = "block";
+      out.innerHTML = '<div class="card spin">Thinking&hellip; retrieving clauses and generating a grounded answer.</div>';
+      try {
+        const res = await fetch("ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        render(await res.json());
+      } catch (err) {
+        out.innerHTML = '<div class="card err">Request failed: ' + esc(String(err.message)) + '</div>';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    function render(a) {
+      const answered = a.status === "answered";
+      const statusLabel = { answered: "Answered", not_in_document: "Not in the policy", out_of_scope: "Out of scope" }[a.status] || a.status;
+
+      let html = '<div class="card">';
+      html += '<div class="status-row"><span class="pill ' + (answered ? "answered" : "refused") + '">' + esc(statusLabel) + '</span></div>';
+      html += '<div class="answer">' + esc(a.answer) + '</div>';
+
+      if (a.plan_dependent) {
+        html += '<div class="plan-flag">&#9888; This answer differs across the eight plan variants &mdash; check which plan you hold.</div>';
+      }
+
+      if (a.cited_sections && a.cited_sections.length) {
+        html += '<div class="cites">';
+        a.cited_sections.forEach(c => { html += '<span class="cite">' + esc(c) + '</span>'; });
+        html += '</div>';
+      }
+
+      // Trust box 1: citation verification. This is the deterministic backstop.
+      if (a.citations_verified) {
+        html += '<div class="trust ok"><b>&#10003; Citations verified.</b> Every clause the answer cites was actually shown to the model.</div>';
+      } else {
+        html += '<div class="trust bad"><b>&#10007; Unverified citation.</b> The answer cited a clause never shown to the model: ' +
+          esc((a.hallucinated_citations || []).join(", ")) + '. Do not trust this answer.</div>';
+      }
+
+      // Retrieved clauses, for auditing.
+      if (a.retrieved && a.retrieved.length) {
+        html += '<details><summary>Clauses retrieved for this question (' + a.retrieved.length + ')</summary><div class="retr">';
+        a.retrieved.forEach(r => {
+          html += '<div><span class="cite">' + esc(r.section) + '</span> ' + esc(r.title || "") + ' &middot; ' + esc(r.pages || "") + '</div>';
+        });
+        html += '</div></details>';
+      }
+
+      html += '</div>';
+      out.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

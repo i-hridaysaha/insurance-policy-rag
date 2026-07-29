@@ -1,5 +1,6 @@
 """Central configuration. Paths are resolved relative to the repo root."""
 
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -129,6 +130,21 @@ OLLAMA_TIMEOUT = 300.0
 # its context ourselves, and we would blame the model. 8192 leaves comfortable headroom; the
 # backend raises if a prompt ever fills the window anyway.
 OLLAMA_CTX = 8192
+
+# --- hosted demo backend (OpenAI-compatible, free) ---
+#
+# Only for the DEPLOYED demo. A free host cannot run Ollama, so the deployed instance talks to a
+# free OpenAI-compatible API instead. Everything is env-driven so no key ever lands in the repo:
+# set GEN_API_KEY (a Groq free-tier key by default) and the API path activates automatically; leave
+# it unset and the app falls back to the local Ollama backend, exactly as before.
+#
+# The default model must support strict json_schema structured output. On Groq that means the
+# gpt-oss / kimi families; llama models on Groq do json_object but not strict schema. Override
+# GEN_MODEL at deploy time to track whatever the free tier currently offers.
+GEN_API_KEY = os.getenv("GEN_API_KEY", "")
+GEN_BASE_URL = os.getenv("GEN_BASE_URL", "https://api.groq.com/openai/v1")
+GEN_MODEL = os.getenv("GEN_MODEL", "openai/gpt-oss-20b")
+OPENAI_COMPAT_TIMEOUT = 120.0
 
 # --- optional frontier baseline (requires API credit; not needed to run this project) ---
 #

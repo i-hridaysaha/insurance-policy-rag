@@ -4,12 +4,16 @@ The whole retrieval layer, the prompt, the JSON schema and the citation guard ar
 across backends. That is the point: swapping the model must not change what the system promises,
 only how well it keeps the promise. It also means the eval measures the MODEL, not the plumbing.
 
-Two backends:
+Three backends:
 
-  OllamaBackend     local, free, no API key. The default. Runs on the developer's machine, so
-                    anyone can clone this repo and run the whole thing end to end.
-  AnthropicBackend  frontier model, paid. Kept so the local results can be benchmarked against a
-                    frontier baseline when that is worth the spend.
+  OllamaBackend        local, free, no API key. The default. Runs on the developer's machine, so
+                       anyone can clone this repo and run the whole thing end to end.
+  OpenAICompatBackend  any OpenAI-compatible chat endpoint with strict json_schema structured
+                       output. Exists for the HOSTED demo: a free host cannot run Ollama, so the
+                       deployed instance points this at a free API (Groq's OpenAI-compatible
+                       endpoint). Free to run, no local model, same schema-constrained contract.
+  AnthropicBackend     frontier model, paid. Kept so the local results can be benchmarked against a
+                       frontier baseline when that is worth the spend.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from src.config import (
     OLLAMA_CTX,
     OLLAMA_TIMEOUT,
     OLLAMA_URL,
+    OPENAI_COMPAT_TIMEOUT,
 )
 
 
@@ -121,6 +126,84 @@ class OllamaBackend:
                 f"context window. Ollama silently drops the overflow, so the retrieved clauses "
                 f"may have been truncated out of the model's view. Raise OLLAMA_CTX."
             )
+
+
+class OpenAICompatBackend:
+    """Any OpenAI-compatible /chat/completions endpoint, with strict json_schema output.
+
+    This is what the hosted demo runs on. A free host (HuggingFace Spaces) cannot run Ollama, so
+    the deployed instance points this at a free OpenAI-compatible API -- Groq by default. The
+    prompt, the schema, the citation guard and the refusal logic are byte-for-byte identical to the
+    local path; only who generates the tokens changes.
+
+    Structured output uses response_format={"type": "json_schema", ..., "strict": true}, the
+    OpenAI/Groq analogue of Ollama's `format` and Anthropic's output_config.format. ANSWER_SCHEMA
+    already satisfies strict mode's rules (every property required, additionalProperties false), so
+    the same schema object is passed through unchanged.
+
+    The model is NOT the one the eval measured. The README numbers are for the local models
+    (qwen2.5:14b, llama3.1:8b); this backend serves a different model for a zero-cost public demo,
+    and the demo labels it as such rather than borrowing the local eval's credibility.
+    """
+
+    def __init__(self, model: str, base_url: str, api_key: str):
+        self.model = model
+        self.name = f"openai-compat/{model}"
+        self.base_url = base_url.rstrip("/")
+        self._api_key = api_key
+
+    def complete_text(self, system: str, user: str) -> tuple[str, dict]:
+        """Unconstrained generation, for the (non-default) two-stage path."""
+        data = self._chat(system, user, schema=None)
+        return data["choices"][0]["message"]["content"], self._usage(data)
+
+    def complete(self, system: str, user: str, schema: dict) -> tuple[dict, dict]:
+        data = self._chat(system, user, schema=schema)
+        content = data["choices"][0]["message"]["content"]
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"{self.name} returned invalid JSON despite schema constraint: {content[:300]}"
+            ) from e
+        return parsed, self._usage(data)
+
+    def _chat(self, system: str, user: str, schema: dict | None) -> dict:
+        body: dict = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            # Extraction from a fixed context is deterministic: one right answer in the clauses,
+            # sampling can only move away from it. Matches the local backend's temperature=0.
+            "temperature": 0,
+            "max_tokens": GEN_MAX_TOKENS,
+        }
+        if schema is not None:
+            # strict:true makes the endpoint constrain decoding to the schema rather than merely
+            # asking for JSON. name is required by the response_format contract.
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "answer", "schema": schema, "strict": True},
+            }
+        r = httpx.post(
+            f"{self.base_url}/chat/completions",
+            timeout=OPENAI_COMPAT_TIMEOUT,
+            headers={"Authorization": f"Bearer {self._api_key}"},
+            json=body,
+        )
+        r.raise_for_status()
+        return r.json()
+
+    def _usage(self, data: dict) -> dict:
+        u = data.get("usage", {}) or {}
+        return {
+            "input_tokens": u.get("prompt_tokens", 0),
+            "output_tokens": u.get("completion_tokens", 0),
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+        }
 
 
 class AnthropicBackend:
