@@ -1,0 +1,24 @@
+# Controls what `gcloud run deploy --source .` uploads. Without this file, gcloud falls back to
+# .gitignore -- which hides data/processed/ (the search index) and would deploy an app with no
+# index. This file overrides that: the index IS uploaded, the PDF and secrets are NOT.
+
+.git/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Secrets: never upload. The Groq key is passed at deploy time as an env var instead.
+.env.local
+
+# Source PDF: copyrighted and not needed at runtime (retrieval uses the prebuilt index).
+data/raw/
+
+# Not needed in the container.
+writing/
+eval/results.json
+tests/
+docs/
+
+# NOTE: data/processed/ is intentionally NOT ignored here -- the prebuilt index must ship.
