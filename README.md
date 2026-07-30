@@ -256,10 +256,6 @@ the approach that lost, and why the anecdote that motivated it was a confound, i
   on outpatient basis". It never says "not covered" anywhere, so a user asking "are my regular
   doctor visits covered?" gets no lexical and little semantic signal. Each exclusion chunk now
   restates its parent's denial, which helped, but this question still misses.
-- **Very short clauses are hard to retrieve.** Section 10.2.l is the entire text "Treatment taken
-  on outpatient basis". It never says "not covered" anywhere, so a user asking "are my regular
-  doctor visits covered?" gets no lexical and little semantic signal. Each exclusion chunk now
-  restates its parent's denial, which helped, but this question still misses.
 - **Unit paraphrase defeats both retrievers.** "I've had the policy for six years" does not
   retrieve the Moratorium clause, which is written as "sixty continuous months". Neither retriever
   does the arithmetic.
