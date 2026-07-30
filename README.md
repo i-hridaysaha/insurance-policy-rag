@@ -9,8 +9,7 @@ a local model through Ollama, so anyone who clones this repo can run the whole p
 including the FastAPI backend. An Anthropic backend is included as an optional frontier baseline,
 but nothing here depends on it.
 
-**Live demo:** <!-- REPLACE with your deployed URL, e.g. https://insurance-policy-rag.onrender.com -->
-`<your-deploy-url>`. The demo is the same pipeline hosted on a free tier. To fit a 512 MB host it
+**Live demo:** https://insurance-policy-rag.onrender.com — the same pipeline hosted on a free tier. To fit a 512 MB host it
 offloads two heavy pieces off-box: query embedding runs on a hosted `all-mpnet-base-v2` endpoint
 (the identical model the index was built with, so retrieval is byte-for-byte the same), and answer
 generation runs on a free hosted model. The retrieval-quality numbers below are measured on the
