@@ -1,7 +1,8 @@
-# Hosted demo image, sized for a free HuggingFace Spaces "Docker" Space (2 vCPU / 16 GB).
-# Generation runs on a free OpenAI-compatible API (set GEN_API_KEY as a Space secret), so no
-# model weights for the LLM ship here -- only the ~420 MB Sentence-BERT retriever, baked in at
-# build time so the first question does not pay a cold download.
+# Container image for a Docker-based host (>=1 GB RAM). This is the FULL stack: it bakes in the
+# ~420 MB Sentence-BERT retriever and runs embedding locally, so it does NOT need EMBED_API_KEY.
+# Generation still uses a free OpenAI-compatible API (set GEN_API_KEY). The free live demo does NOT
+# use this file -- it deploys on Render from render.yaml with the slim, torch-free requirements and
+# offloaded embedding (see docs/DEPLOY-RENDER.md). Kept for anyone deploying to a Docker host.
 FROM python:3.12-slim
 
 # HuggingFace runs the container as a non-root user (uid 1000). Give it a writable home so the

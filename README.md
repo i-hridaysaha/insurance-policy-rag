@@ -4,10 +4,11 @@ Ask a health insurance policy a plain-English question. Get an answer grounded i
 text, with the exact clause it came from. If the policy does not answer the question, the system
 says so instead of guessing.
 
-**Runs entirely on your machine. No API key, no billing, nothing to sign up for.** Generation uses
-a local model through Ollama, so anyone who clones this repo can run the whole pipeline end to end,
-including the FastAPI backend. An Anthropic backend is included as an optional frontier baseline,
-but nothing here depends on it.
+**Clone it and everything runs on your machine: no API key, no billing, nothing to sign up for.**
+Generation uses a local model through Ollama, so anyone who clones this repo can run the whole
+pipeline end to end, including the FastAPI backend. An Anthropic backend is included as an optional
+frontier baseline, but nothing here depends on it. (The public live demo above is the exception: to
+fit a free host it swaps in free hosted APIs for embedding and generation, described next.)
 
 **Live demo:** https://insurance-policy-rag.onrender.com — the same pipeline hosted on a free tier. To fit a 512 MB host it
 offloads two heavy pieces off-box: query embedding runs on a hosted `all-mpnet-base-v2` endpoint
@@ -277,15 +278,18 @@ src/
     chunk.py             clause-boundary chunking, token-window aware
     annexure_a.py        hand-structured plan matrix (the 8-column table)
   retrieval/
-    dense.py             Sentence-BERT + FAISS
+    dense.py             Sentence-BERT + FAISS (query embedding offloadable to a hosted endpoint)
     sparse.py            BM25 + stemming + signal gate
     hybrid.py            RRF fusion, section dedupe
   generation/
     prompt.py            the answering prompt (the whole safety boundary)
-    backends.py          local Ollama (default) and optional Anthropic
+    backends.py          local Ollama (default), OpenAI-compatible (Groq, the hosted demo), Anthropic
     answer.py            grounding, refusal, citation verification
   api/
-    app.py               FastAPI /ask + /health
+    app.py               FastAPI /ask + /health, serves the web UI
+web/
+  index.html             single-page demo frontend
+render.yaml              Render blueprint + requirements-hosted.txt: the free hosted demo (no torch)
 eval/
   qa_pairs.yaml          34 ground-truth pairs (31 answerable, 3 refusals)
 scripts/
@@ -335,7 +339,8 @@ correct in every artifact while being partly invisible to the retriever.
 undefined behaviour, and if faiss's copy loads first, torch segfaults the moment it dispatches real
 multi-threaded work. It does not reproduce on short strings, which makes it look flaky rather than
 deterministic. `src/retrieval/dense.py` imports `sentence_transformers` before `faiss` so torch's
-runtime wins. Do not let an import sorter reorder those two lines.
+runtime wins. Do not let an import sorter reorder those two lines. (In the hosted-demo mode, where
+query embedding is offloaded to an API, torch is never imported and this ordering does not apply.)
 
 ## Next
 
