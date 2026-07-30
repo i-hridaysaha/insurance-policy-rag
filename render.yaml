@@ -1,0 +1,19 @@
+# Render Blueprint for the free live demo. In Render: New -> Blueprint -> pick this repo, and it
+# reads everything below. The two secrets are marked sync:false, so Render prompts you to paste
+# them in the dashboard instead of storing them in the repo.
+services:
+  - type: web
+    name: insurance-policy-rag
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-hosted.txt
+    startCommand: uvicorn src.api.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Free HuggingFace token -> query embedding is offloaded so the app fits 512 MB.
+      - key: EMBED_API_KEY
+        sync: false
+      # Free Groq key -> answer generation.
+      - key: GEN_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.6"

@@ -17,6 +17,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+# HOSTED-EMBEDDING MODE. When EMBED_API_KEY is set, the query is embedded by a remote endpoint and
+# this process must NOT import sentence_transformers / torch at all -- that is the whole point on a
+# 512 MB host. So the torch import is conditional on the mode, decided once at import time.
+from src.config import EMBED_API_KEY, EMBED_API_URL, EMBED_TIMEOUT, EMBEDDING_MODEL
+
+_HOSTED = bool(EMBED_API_KEY)
+
 # IMPORT ORDER IS LOAD-BEARING ON macOS/ARM. DO NOT REORDER, AND DO NOT LET AN
 # IMPORT SORTER (isort/ruff) REORDER IT -- hence the isort: off fence below.
 #
@@ -32,16 +39,17 @@ from pathlib import Path
 #
 # Importing sentence_transformers (and therefore torch) first makes torch's libomp win,
 # and torch tolerates faiss loading afterwards. Verified: faiss-first + real corpus
-# segfaults; torch-first + real corpus succeeds.
+# segfaults; torch-first + real corpus succeeds. In hosted mode torch is never imported, so
+# there is no second OpenMP runtime and the ordering is moot -- only faiss loads.
 #
 # isort: off
-from sentence_transformers import SentenceTransformer  # noqa: I001  (must precede faiss)
+if not _HOSTED:
+    from sentence_transformers import SentenceTransformer  # noqa: I001  (must precede faiss)
 import faiss
 
 # isort: on
+import httpx
 import numpy as np
-
-from src.config import EMBEDDING_MODEL
 
 # Exhaustive search over a few hundred vectors is sub-millisecond single-threaded. Pinning
 # faiss to one thread removes it from the OpenMP contention entirely, at no measurable cost.
@@ -51,19 +59,21 @@ faiss.omp_set_num_threads(1)
 class DenseRetriever:
     def __init__(self, model_name: str = EMBEDDING_MODEL):
         self.model_name = model_name
-        self._model: SentenceTransformer | None = None
+        self._model = None
         self.index: faiss.Index | None = None
         self.chunk_ids: list[str] = []
 
     @property
-    def model(self) -> SentenceTransformer:
+    def model(self):
         # Lazy: loading the transformer costs seconds, and the eval harness constructs
-        # retrievers it does not always query.
+        # retrievers it does not always query. Never reached in hosted mode.
         if self._model is None:
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
     def _encode(self, texts: list[str]) -> np.ndarray:
+        if _HOSTED:
+            return self._encode_hosted(texts)
         vecs = self.model.encode(
             texts,
             convert_to_numpy=True,
@@ -71,6 +81,27 @@ class DenseRetriever:
             show_progress_bar=False,
         )
         return vecs.astype(np.float32)
+
+    def _encode_hosted(self, texts: list[str]) -> np.ndarray:
+        """Embed via the remote all-mpnet endpoint, then reproduce the local post-processing.
+
+        The local path passes normalize_embeddings=True; HF's feature-extraction pipeline returns
+        the same mean-pooled sentence vectors but UN-normalised, so we L2-normalise here to land on
+        byte-for-byte the same space the FAISS index was built in. wait_for_model rides out the
+        cold-load 503 instead of failing the first request after the model has been evicted.
+        """
+        r = httpx.post(
+            EMBED_API_URL,
+            timeout=EMBED_TIMEOUT,
+            headers={"Authorization": f"Bearer {EMBED_API_KEY}"},
+            json={"inputs": texts, "options": {"wait_for_model": True}},
+        )
+        r.raise_for_status()
+        vecs = np.asarray(r.json(), dtype=np.float32)
+        if vecs.ndim == 1:  # a single input can come back as a bare vector
+            vecs = vecs[None, :]
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        return vecs / np.clip(norms, 1e-12, None)
 
     def build(self, chunks: list[dict]) -> None:
         self.chunk_ids = [c["chunk_id"] for c in chunks]

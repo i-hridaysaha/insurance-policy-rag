@@ -9,6 +9,14 @@ a local model through Ollama, so anyone who clones this repo can run the whole p
 including the FastAPI backend. An Anthropic backend is included as an optional frontier baseline,
 but nothing here depends on it.
 
+**Live demo:** <!-- REPLACE with your deployed URL, e.g. https://insurance-policy-rag.onrender.com -->
+`<your-deploy-url>`. The demo is the same pipeline hosted on a free tier. To fit a 512 MB host it
+offloads two heavy pieces off-box: query embedding runs on a hosted `all-mpnet-base-v2` endpoint
+(the identical model the index was built with, so retrieval is byte-for-byte the same), and answer
+generation runs on a free hosted model. The retrieval-quality numbers below are measured on the
+local models; treat the demo's answer fluency as illustrative, not as the eval result. See
+[docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md).
+
 Retrieval was built and verified first, on purpose. It is the gate: if the right clause does not
 come back, no prompt downstream can rescue the answer, and measuring answer quality on top of
 broken retrieval only measures noise.
@@ -335,8 +343,5 @@ runtime wins. Do not let an import sorter reorder those two lines.
 1. Close the confabulation-on-retrieval-miss gap: when the answering clause is not retrieved, the
    generator should be pushed harder toward "not in these clauses" instead of assembling an answer
    from neighbours. This is the one open correctness hole (see limitations).
-2. A hosted demo. It needs a hosting decision the local-model choice complicates: a free static
-   host cannot run a 9GB model, so the options are a small model on a cheap GPU host, a paid model
-   API behind the endpoint, or a recorded walkthrough plus this runnable repo.
-3. Expand the question set well beyond 34, weighted toward exact-term lookups, and hold out a split
+2. Expand the question set well beyond 34, weighted toward exact-term lookups, and hold out a split
    before quoting any tuned number.

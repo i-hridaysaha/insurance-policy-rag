@@ -14,9 +14,10 @@ __pycache__/
 data/raw/*.pdf
 
 # --- generated artifacts (rebuild with `python -m scripts.build_index`) ---
-# chunks.jsonl is the extracted policy text; the FAISS + BM25 indexes are derived from it. Both
-# rebuild from the PDF, so neither is committed.
-data/processed/
+# chunks.jsonl is the extracted policy text; the FAISS + BM25 indexes are derived from it. These
+# are now COMMITTED (they total under 1 MB) so the free hosted demo can clone a ready-to-serve
+# index without the source PDF, which stays out of the repo for copyright. Rebuild locally any
+# time with `python -m scripts.build_index`.
 
 # --- generated eval output (rebuild with `python -m scripts.evaluate`) ---
 # The measured numbers are in the README; this is the full per-question dump behind them.

@@ -131,6 +131,26 @@ OLLAMA_TIMEOUT = 300.0
 # backend raises if a prompt ever fills the window anyway.
 OLLAMA_CTX = 8192
 
+# --- hosted query embedding (free, for the 512 MB no-card deploy) ---
+#
+# The retriever normally embeds the query with a local Sentence-BERT model (torch, ~1 GB RAM). A
+# free no-card host (Render/Koyeb) only has 512 MB, so the DEPLOYED instance instead calls a hosted
+# endpoint for the SAME model -- sentence-transformers/all-mpnet-base-v2 -- keeping the prebuilt
+# index valid and the eval numbers honest. The server then needs no torch at all.
+#
+# Set EMBED_API_KEY (a free HuggingFace token) and query embedding goes to the API; leave it unset
+# and the retriever loads the local model exactly as before. EMBED_API_URL defaults to HF's
+# feature-extraction endpoint for the model; point it elsewhere to use another provider.
+EMBED_API_KEY = os.getenv("EMBED_API_KEY", "")
+EMBED_API_URL = os.getenv(
+    "EMBED_API_URL",
+    # 2026 router endpoint. The old api-inference.huggingface.co host was retired; the hf-inference
+    # provider now serves feature-extraction under router.huggingface.co.
+    "https://router.huggingface.co/hf-inference/models/"
+    "sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction",
+)
+EMBED_TIMEOUT = 60.0
+
 # --- hosted demo backend (OpenAI-compatible, free) ---
 #
 # Only for the DEPLOYED demo. A free host cannot run Ollama, so the deployed instance talks to a
