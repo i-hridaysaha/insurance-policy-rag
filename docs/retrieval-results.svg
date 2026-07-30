@@ -1,0 +1,99 @@
+<svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Retrieval recall by cutoff for dense, sparse and hybrid retrievers">
+  <title>The honest retrieval result</title>
+  <desc>Recall at k on 31 hand-built questions. Hybrid wins at k=3, ties dense at k=5, and loses at k=10. Dense also leads on MRR@5.</desc>
+
+  <rect x="8" y="8" width="984" height="684" rx="14" fill="#FAFAF7" stroke="#E6E6DF" stroke-width="1"/>
+
+  <text x="56" y="56" font-size="26" font-weight="700" fill="#16181D">The honest retrieval result</text>
+  <text x="56" y="84" font-size="14" fill="#6B7280">Recall@k on 31 hand-built questions, deduplicated by clause. Hybrid wins at 3, ties at 5, loses at 10.</text>
+
+  <!-- legend -->
+  <g font-size="13" fill="#16181D">
+    <line x1="56" y1="112" x2="84" y2="112" stroke="#2a78d6" stroke-width="3"/><circle cx="70" cy="112" r="4" fill="#2a78d6"/><text x="92" y="116">Dense · embeddings</text>
+    <line x1="300" y1="112" x2="328" y2="112" stroke="#eb6834" stroke-width="3"/><circle cx="314" cy="112" r="4" fill="#eb6834"/><text x="336" y="116">Hybrid · RRF fusion</text>
+    <line x1="540" y1="112" x2="568" y2="112" stroke="#1baf7a" stroke-width="3"/><circle cx="554" cy="112" r="4" fill="#1baf7a"/><text x="576" y="116">Sparse · BM25</text>
+  </g>
+
+  <!-- gridlines + y labels -->
+  <g stroke="#E6E6DF" stroke-width="1">
+    <line x1="120" y1="470" x2="880" y2="470"/>
+    <line x1="120" y1="402.2" x2="880" y2="402.2"/>
+    <line x1="120" y1="334.4" x2="880" y2="334.4"/>
+    <line x1="120" y1="266.7" x2="880" y2="266.7"/>
+    <line x1="120" y1="198.9" x2="880" y2="198.9"/>
+  </g>
+  <g font-size="11.5" fill="#9AA0A8" text-anchor="end">
+    <text x="108" y="474">50</text>
+    <text x="108" y="406.2">60</text>
+    <text x="108" y="338.4">70</text>
+    <text x="108" y="270.7">80</text>
+    <text x="108" y="202.9">90</text>
+  </g>
+  <text x="120" y="158" font-size="11.5" fill="#9AA0A8">recall %</text>
+
+  <!-- x labels -->
+  <g font-size="13" fill="#16181D" text-anchor="middle" font-weight="600">
+    <text x="300" y="496">@3</text>
+    <text x="530" y="496">@5</text>
+    <text x="760" y="496">@10</text>
+  </g>
+
+  <!-- sparse -->
+  <polyline points="300,437.5 530,327.7 760,284.3" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- dense -->
+  <polyline points="300,262.6 530,218.5 760,175.2" fill="none" stroke="#2a78d6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- hybrid -->
+  <polyline points="300,240.2 530,218.5 760,196.8" fill="none" stroke="#eb6834" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- markers -->
+  <g stroke="#FAFAF7" stroke-width="2">
+    <circle cx="300" cy="437.5" r="5" fill="#1baf7a"/><circle cx="530" cy="327.7" r="5" fill="#1baf7a"/><circle cx="760" cy="284.3" r="5" fill="#1baf7a"/>
+    <circle cx="300" cy="262.6" r="5" fill="#2a78d6"/><circle cx="760" cy="175.2" r="5" fill="#2a78d6"/>
+    <circle cx="300" cy="240.2" r="5" fill="#eb6834"/><circle cx="760" cy="196.8" r="5" fill="#eb6834"/>
+  </g>
+  <!-- tie marker at k=5 -->
+  <circle cx="530" cy="218.5" r="6.5" fill="#16181D" stroke="#F0FF00" stroke-width="2.5"/>
+
+  <!-- value labels -->
+  <g font-size="12.5" fill="#16181D" text-anchor="middle">
+    <text x="300" y="228">83.9</text>
+    <text x="300" y="282">80.6</text>
+    <text x="760" y="166">93.5</text>
+    <text x="760" y="214">90.3</text>
+  </g>
+  <g font-size="12.5" fill="#6B7280" text-anchor="middle">
+    <text x="300" y="455">54.8</text>
+    <text x="530" y="345">71.0</text>
+    <text x="760" y="302">77.4</text>
+  </g>
+  <!-- tie callout -->
+  <text x="548" y="214" font-size="12.5" fill="#16181D" font-weight="600">87.1 · a tie</text>
+  <rect x="548" y="220" width="70" height="3" fill="#F0FF00"/>
+
+  <!-- divider -->
+  <line x1="56" y1="524" x2="944" y2="524" stroke="#E6E6DF" stroke-width="1"/>
+
+  <!-- MRR strip -->
+  <text x="56" y="552" font-size="13" fill="#6B7280">Mean reciprocal rank · MRR@5, on a 0 to 1 scale</text>
+  <g font-size="12.5" fill="#16181D">
+    <text x="56" y="576">Dense</text>
+    <text x="56" y="600">Hybrid</text>
+    <text x="56" y="624">Sparse</text>
+  </g>
+  <g>
+    <rect x="150" y="569" width="343.4" height="12" rx="6" fill="#2a78d6"/>
+    <rect x="150" y="593" width="322.0" height="12" rx="6" fill="#eb6834"/>
+    <rect x="150" y="617" width="228.9" height="12" rx="6" fill="#1baf7a"/>
+  </g>
+  <g font-size="12.5" fill="#16181D" font-weight="600">
+    <text x="503" y="579">0.723</text>
+    <text x="482" y="603">0.678</text>
+    <text x="389" y="627">0.482</text>
+  </g>
+  <text x="620" y="596" font-size="12.5" fill="#9AA0A8">Dense leads on MRR: RRF discards score</text>
+  <text x="620" y="613" font-size="12.5" fill="#9AA0A8">magnitude and flattens the top of the ranking.</text>
+
+  <!-- honest footer -->
+  <text x="56" y="658" font-size="12.5" fill="#6B7280">Hybrid is kept for decorrelated failures, not a higher score: the union of dense and sparse covers 29 of 31.</text>
+  <text x="56" y="678" font-size="12.5" fill="#6B7280">On the hard, plan-specific questions, recall@5 is 100%.</text>
+</svg>

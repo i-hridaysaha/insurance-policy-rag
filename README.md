@@ -121,6 +121,10 @@ is like-for-like: all three retrievers are deduplicated by section, so `k` means
 
 Recall@5 by difficulty (hybrid): easy 85.7%, medium 72.7%, **hard 100%**.
 
+<p align="center">
+  <img src="docs/retrieval-results.svg" alt="Recall@k for dense, sparse and hybrid retrievers: hybrid leads at k=3, ties dense at k=5 (marked), loses at k=10, and dense leads on MRR@5." width="640">
+</p>
+
 **Honest reading of this table: the hybrid does not beat dense retrieval on this question set.**
 It wins at k=3, ties at k=5, and loses at k=10 and on MRR. Reporting it as a win would be
 dishonest.
@@ -176,6 +180,10 @@ above some threshold, the question has no answer here. Measured, that is wrong, 
 
 The distributions overlap almost entirely. A threshold that rejects all three unanswerable
 questions also rejects **29 of the 31 answerable ones**. BM25 separates no better.
+
+<p align="center">
+  <img src="docs/refusal-threshold.svg" alt="Overlapping score ranges: answerable questions span 0.341 to 0.647, unanswerable 0.479 to 0.640; the strictest threshold rejecting all 3 unanswerable also rejects 29 of 31 answerable, leaving only 2 above the line." width="640">
+</p>
 
 The cause is structural, not a tuning failure. "What is this insurer's claim settlement ratio?"
 *is* an insurance question, phrased in the document's own vocabulary, and it embeds right next to
