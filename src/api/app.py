@@ -20,6 +20,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -123,7 +124,16 @@ def ask(req: AskRequest) -> AskResponse:
 
     # A regular `def` endpoint, not `async def`: local inference blocks for ~30-40s, and FastAPI
     # runs a sync endpoint in a worker thread so that blocking does not stall the event loop.
-    a = answerer.ask(req.question, top_k=req.top_k)
+    try:
+        a = answerer.ask(req.question, top_k=req.top_k)
+    except httpx.HTTPError as e:
+        # The generation upstream (hosted OpenAI-compat model) timed out or returned an error.
+        # This is transient and retryable -- a raw 500 would read as a bug in our own code, so
+        # surface it as 502 with a message the frontend can retry on.
+        raise HTTPException(
+            status_code=502,
+            detail="generation upstream failed or timed out; please retry",
+        ) from e
 
     return AskResponse(
         question=req.question,

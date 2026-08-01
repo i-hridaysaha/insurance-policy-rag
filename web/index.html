@@ -134,11 +134,20 @@
       out.style.display = "block";
       out.innerHTML = '<div class="card spin">Thinking&hellip; retrieving clauses and generating a grounded answer.</div>';
       try {
-        const res = await fetch("ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question })
-        });
+        // The generation upstream can time out or 5xx transiently (hosted model, cold start).
+        // Retry once on a server error before surfacing the failure.
+        let res;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          res = await fetch("ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question })
+          });
+          if (res.ok || res.status < 500) break;
+          if (attempt === 0) {
+            out.innerHTML = '<div class="card spin">Upstream was busy &mdash; retrying once&hellip;</div>';
+          }
+        }
         if (!res.ok) throw new Error("HTTP " + res.status);
         render(await res.json());
       } catch (err) {
